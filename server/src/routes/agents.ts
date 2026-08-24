@@ -7,7 +7,7 @@ import { Hono } from "hono"
 import { authRequired } from "../middleware/auth.js"
 import { newId, newToken, hashToken, timingSafeEqual } from "../lib/ids.js"
 import { now, randomHex } from "../db/connection.js"
-import { auditLog } from "../db/webauthn.js"
+import { auditLog, getConfig, setConfig } from "../db/webauthn.js"
 import db from "../db/connection.js"
 import config from "../config.js"
 import { dispatchNotification } from "../lib/notifications.js"
@@ -54,11 +54,14 @@ agents.post("/register", async (c) => {
   }
 
   // Verify setup token
-  const expectedSetupToken = config.getConfig?.("agent_setup_token") ?? null
+  const expectedSetupToken = getConfig("agent_setup_token")
   if (!expectedSetupToken || !timingSafeEqual(body.setupToken, expectedSetupToken)) {
     auditLog("agent_register_failed", { hostname: body.hostname }, c.req.header("x-forwarded-for"))
     return c.json({ error: "Invalid setup token" }, 403)
   }
+
+  // Consume the setup token (single-use)
+  setConfig("agent_setup_token", "")
 
   const agentId = newId()
   const agentToken = newToken()
