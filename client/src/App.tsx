@@ -16,6 +16,7 @@ import { DashboardPage } from "@/pages/DashboardPage"
 import { AgentsPage } from "@/pages/AgentsPage"
 import { SourcesPage } from "@/pages/SourcesPage"
 import { JobsPage } from "@/pages/JobsPage"
+import { JobDetailPage } from "@/pages/JobDetailPage"
 import { HistoryPage } from "@/pages/HistoryPage"
 import { RestorePage } from "@/pages/RestorePage"
 import { NotificationsPage } from "@/pages/NotificationsPage"
@@ -44,7 +45,7 @@ function Gates() {
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/sources" element={<SourcesPage />} />
         <Route path="/jobs" element={<JobsPage />} />
-        <Route path="/jobs/:id" element={<JobsPage />} />
+        <Route path="/jobs/:id" element={<JobDetailPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/restore" element={<RestorePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />

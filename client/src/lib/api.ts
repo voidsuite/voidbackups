@@ -140,6 +140,27 @@ export function listSources(): Promise<AgentSources[]> {
   return gateway("/api/sources")
 }
 
+export function createSource(data: {
+  agentId: string
+  type: string
+  name: string
+  path: string
+  metadata?: Record<string, unknown>
+}): Promise<{ id: string }> {
+  return gateway("/api/sources", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export function deleteSource(id: string): Promise<void> {
+  return gateway(`/api/sources/${id}`, { method: "DELETE" })
+}
+
+export function discoverSources(agentId: string): Promise<{ ok: boolean }> {
+  return gateway(`/api/sources/discover/${agentId}`, { method: "POST" })
+}
+
 // --- Jobs ---
 
 export interface Job {
