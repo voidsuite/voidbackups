@@ -24,7 +24,35 @@ import {
 const RP_NAME = config.rpName
 const RP_ID = config.rpID
 
-// In-memory challenge cache is NOT used — challenges are persisted in SQLite.
+// --- Helpers for Uint8Array ↔ base64url ---
+
+function bufferToBase64url(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
+  let binary = ""
+  for (const b of bytes) binary += String.fromCharCode(b)
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+}
+
+function base64urlToBuffer(base64url: string): Uint8Array {
+  // Handle old JSON-stringified Uint8Array format ({"0":72,"1":101,...})
+  if (base64url.startsWith("{")) {
+    try {
+      const obj = JSON.parse(base64url)
+      if (typeof obj === "object" && obj !== null && "0" in obj) {
+        const values = Object.values(obj).map(Number)
+        return new Uint8Array(values)
+      }
+    } catch {}
+  }
+  const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/")
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4)
+  const binary = atob(padded)
+  const buffer = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    buffer[i] = binary.charCodeAt(i)
+  }
+  return buffer
+}
 
 // --- Registration ---
 
@@ -51,12 +79,16 @@ export async function completeRegistration(
   expectedChallenge: string,
   userName: string
 ): Promise<StoredUser> {
-  const expectedOrigin = config.appUrl
+  const storedChallenge = takeChallenge(expectedChallenge)
+  if (!storedChallenge) {
+    console.error("[webauthn] registration failed: challenge not found or expired")
+    throw new Error("Challenge expired or not found — please try again")
+  }
 
   const verification = await verifyRegistrationResponse({
     response,
-    expectedChallenge,
-    expectedOrigin,
+    expectedChallenge: storedChallenge.challenge,
+    expectedOrigin: config.appUrl,
     expectedRPID: RP_ID,
   })
 
@@ -69,11 +101,11 @@ export async function completeRegistration(
   // Generate a user ID
   const userId = crypto.randomUUID()
 
-  // Store the credential
+  // Store the credential — public key as base64url (not JSON.stringify of Uint8Array)
   const user = createUser({
     id: userId,
     credentialId: credential.id,
-    publicKey: JSON.stringify(credential.publicKey),
+    publicKey: bufferToBase64url(credential.publicKey),
     counter: credential.counter,
     name: userName,
   })
@@ -99,36 +131,55 @@ export async function completeAuthentication(
   response: AuthenticationResponseJSON,
   expectedChallenge: string
 ): Promise<StoredUser> {
-  const expectedOrigin = config.appUrl
+  // Build list of acceptable origins — always include the configured appUrl
+  const origins = [config.appUrl]
+  // If appUrl is https, also accept http variant (for dev/reverse-proxy scenarios)
+  if (config.appUrl.startsWith("https://")) {
+    origins.push(config.appUrl.replace("https://", "http://"))
+  }
 
   // Look up the credential
   const credentialId = response.id
   const user = getUserByCredentialId(credentialId)
 
   if (!user) {
-    throw new Error("Unknown credential")
+    console.error("[webauthn] login failed: unknown credential ID:", credentialId)
+    throw new Error("Unknown credential — have you registered a passkey?")
   }
 
-  const verification = await verifyAuthenticationResponse({
-    response,
-    expectedChallenge,
-    expectedOrigin,
-    expectedRPID: RP_ID,
-    credential: {
-      id: user.credential_id,
-      publicKey: JSON.parse(user.public_key) as Uint8Array,
-      counter: user.counter,
-      transports: ["internal"] as AuthenticatorTransportFuture[],
-    },
-  })
-
-  if (!verification.verified) {
-    throw new Error("Authentication verification failed")
+  const storedChallenge = takeChallenge(expectedChallenge)
+  if (!storedChallenge) {
+    console.error("[webauthn] login failed: challenge not found or expired for:", expectedChallenge.slice(0, 16) + "...")
+    throw new Error("Challenge expired or not found — please try again")
   }
 
-  // Update the counter to prevent replay attacks
-  const newCounter = verification.authenticationInfo.newCounter
-  // We'll update the counter in the session handler
+  try {
+    const verification = await verifyAuthenticationResponse({
+      response,
+      expectedChallenge: storedChallenge.challenge,
+      expectedOrigin: origins[0],
+      expectedRPID: RP_ID,
+      credential: {
+        id: user.credential_id,
+        publicKey: base64urlToBuffer(user.public_key),
+        counter: user.counter,
+        transports: ["internal"] as AuthenticatorTransportFuture[],
+      },
+    })
 
-  return user
+    if (!verification.verified) {
+      console.error("[webauthn] login failed: verification returned false")
+      throw new Error("Authentication verification failed")
+    }
+
+    // Update the counter to prevent replay attacks
+    const newCounter = verification.authenticationInfo.newCounter
+    // We'll update the counter in the session handler
+
+    return user
+  } catch (err) {
+    // Log the actual error for debugging
+    console.error("[webauthn] login verification error:", err)
+    throw err
+  }
 }

@@ -109,6 +109,8 @@ auth.post("/login/complete", async (c) => {
     return c.json({ error: "Missing response or challenge" }, 400)
   }
 
+  console.log("[auth] login/complete — origin:", c.req.header("origin"), "| config.appUrl:", serverConfig.appUrl)
+
   try {
     const user = await completeAuthentication(body.response, body.challenge)
 
@@ -120,7 +122,7 @@ auth.post("/login/complete", async (c) => {
 
     return c.json({ user: { id: user.id, name: user.name } })
   } catch (err) {
-    console.error("[auth] login/complete error:", err)
+    console.error("[auth] login/complete error:", (err as Error).message)
     return c.json({ error: (err as Error).message }, 400)
   }
 })
