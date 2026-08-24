@@ -5,13 +5,14 @@
 
 import { Hono } from "hono"
 import { setCookie, deleteCookie, getCookie } from "hono/cookie"
-import config from "../config.js"
 import {
   hasUser,
   createSession,
   deleteSessionById,
   getSessionCookieName,
   getSessionCookieOptions,
+  getSession,
+  getUserById,
   auditLog,
 } from "../db/webauthn.js"
 import {
@@ -20,6 +21,11 @@ import {
   startAuthentication,
   completeAuthentication,
 } from "../lib/webauthn.js"
+
+// Import config at top level and keep a local reference
+import serverConfig from "../config.js"
+
+const SESSION_DAYS = serverConfig.sessionDays
 
 const auth = new Hono()
 
@@ -41,8 +47,13 @@ auth.post("/register/start", async (c) => {
     return c.json({ error: "Name is required" }, 400)
   }
 
-  const options = await startRegistration(userName.trim())
-  return c.json(options)
+  try {
+    const options = await startRegistration(userName.trim())
+    return c.json(options)
+  } catch (err) {
+    console.error("[auth] register/start error:", err)
+    return c.json({ error: (err as Error).message }, 400)
+  }
 })
 
 // POST /api/auth/register/complete — finish passkey registration
@@ -60,13 +71,14 @@ auth.post("/register/complete", async (c) => {
     const user = await completeRegistration(body.response, body.challenge, body.name)
 
     // Create a session cookie
-    const sessionId = createSession(user.id, config.sessionDays)
-    setCookie(c, getSessionCookieName(), sessionId, getSessionCookieOptions(config.sessionDays))
+    const sessionId = createSession(user.id, SESSION_DAYS)
+    setCookie(c, getSessionCookieName(), sessionId, getSessionCookieOptions(SESSION_DAYS))
 
     auditLog("user_registered", { userId: user.id, name: user.name })
 
     return c.json({ user: { id: user.id, name: user.name } })
   } catch (err) {
+    console.error("[auth] register/complete error:", err)
     return c.json({ error: (err as Error).message }, 400)
   }
 })
@@ -77,8 +89,13 @@ auth.post("/login/start", async (c) => {
     return c.json({ error: "No account configured" }, 400)
   }
 
-  const options = await startAuthentication()
-  return c.json(options)
+  try {
+    const options = await startAuthentication()
+    return c.json(options)
+  } catch (err) {
+    console.error("[auth] login/start error:", err)
+    return c.json({ error: (err as Error).message }, 400)
+  }
 })
 
 // POST /api/auth/login/complete — finish passkey authentication
@@ -96,13 +113,14 @@ auth.post("/login/complete", async (c) => {
     const user = await completeAuthentication(body.response, body.challenge)
 
     // Create a session cookie
-    const sessionId = createSession(user.id, config.sessionDays)
-    setCookie(c, getSessionCookieName(), sessionId, getSessionCookieOptions(config.sessionDays))
+    const sessionId = createSession(user.id, SESSION_DAYS)
+    setCookie(c, getSessionCookieName(), sessionId, getSessionCookieOptions(SESSION_DAYS))
 
     auditLog("user_login", { userId: user.id })
 
     return c.json({ user: { id: user.id, name: user.name } })
   } catch (err) {
+    console.error("[auth] login/complete error:", err)
     return c.json({ error: (err as Error).message }, 400)
   }
 })
@@ -113,9 +131,6 @@ auth.get("/me", async (c) => {
   if (!sessionId) {
     return c.json({ error: "Not authenticated" }, 401)
   }
-
-  const { getSession } = await import("../db/webauthn.js")
-  const { getUserById } = await import("../db/webauthn.js")
 
   const session = getSession(sessionId)
   if (!session) {

@@ -3,6 +3,7 @@
  * Single-user: exactly one credential is registered.
  */
 
+import config from "../config.js"
 import db, { now, randomHex } from "./connection.js"
 
 // --- Users ---
