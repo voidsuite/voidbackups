@@ -13,10 +13,14 @@ import {
   Settings,
   LogOut,
   Shield,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth"
+import { useTheme } from "@/contexts/theme"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { VoidBackupsLogo } from "@/components/layout/VoidBackupsLogo"
@@ -45,6 +49,15 @@ const navItems: (NavItem | SeparatorItem)[] = [
 
 export function Sidebar() {
   const { user, logout } = useAuth()
+  const { theme, setTheme } = useTheme()
+
+  function cycleTheme() {
+    const order: Array<"light" | "dark" | "system"> = ["light", "dark", "system"]
+    const idx = order.indexOf(theme)
+    setTheme(order[(idx + 1) % order.length])
+  }
+
+  const ThemeIcon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
@@ -94,6 +107,15 @@ export function Sidebar() {
           <p className="text-sm font-medium truncate">{user?.name || "Admin"}</p>
           <p className="text-xs text-muted-foreground truncate">Passkey</p>
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={cycleTheme}
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          title={`Theme: ${theme}`}
+        >
+          <ThemeIcon className="h-4 w-4" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
