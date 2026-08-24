@@ -181,12 +181,10 @@ fi
 # Download agent binary
 echo "Downloading VoidBackups agent..."
 mkdir -p "$INSTALL_DIR"
-ARCHIVE_URL="$SERVER_URL/api/releases/voidbackups-agent-\${PLATFORM}_\${ARCH}.tar.gz"
-HTTP_CODE=\$(curl -fsSL -w '%{http_code}' -o /tmp/voidbackups-agent.tar.gz "$ARCHIVE_URL")
+ARCHIVE_URL="$SERVER_URL/api/releases/voidbackups-agent-\${PLATFORM}_\${ARCH}"
+HTTP_CODE=\$(curl -fsSL -w '%{http_code}' -o "$AGENT_BIN" "$ARCHIVE_URL")
 if [ "\$HTTP_CODE" = "200" ]; then
-  tar -xzf /tmp/voidbackups-agent.tar.gz -C "$INSTALL_DIR/"
   chmod +x "$AGENT_BIN"
-  rm -f /tmp/voidbackups-agent.tar.gz
   echo "  ✓ agent binary installed"
 else
   # Fallback: try to build from source if Go is available
@@ -293,7 +291,7 @@ echo "  Stop:    systemctl stop voidbackups-agent"
 app.get("/api/releases/:filename", async (c) => {
   const filename = c.req.param("filename")
   // Only allow specific binary patterns
-  if (!/^voidbackups-agent-(linux|darwin)_(amd64|arm64|armv7)(\.tar\.gz)?$/.test(filename)) {
+  if (!/^voidbackups-agent-(linux|darwin)_(amd64|arm64|armv7)$/.test(filename)) {
     return c.json({ error: "Not found" }, 404)
   }
   const filePath = path.resolve(__dirname, "../../releases", filename)
