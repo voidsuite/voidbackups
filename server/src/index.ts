@@ -5,6 +5,7 @@
  *   /api/sources/*    Backup source management
  *   /api/jobs/*       Backup job management
  *   /api/runs/*       Backup run history and logs
+ *   /api/restore/*    Restore operations
  *   /api/wizard/*     Setup wizard
  *   /api/notifications/* Notification channel management
  *
@@ -22,13 +23,20 @@ import agentRoutes from "./routes/agents.js"
 import sourceRoutes from "./routes/sources.js"
 import jobRoutes from "./routes/jobs.js"
 import runRoutes from "./routes/runs.js"
+import restoreRoutes from "./routes/restore.js"
 import wizardRoutes from "./routes/wizard.js"
 import notificationRoutes from "./routes/notifications.js"
+import { securityHeaders, csrfProtection } from "./middleware/security.js"
+import { apiRateLimit, agentRateLimit } from "./middleware/rate-limit.js"
+import { startScheduler } from "./lib/scheduler.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DIST_DIR = path.resolve(__dirname, "../../client/dist")
 
 const app = new Hono()
+
+// --- Security headers (all responses) ---
+app.use("*", securityHeaders)
 
 // --- CORS ---
 app.use(
@@ -40,6 +48,9 @@ app.use(
     credentials: true,
   })
 )
+
+// --- CSRF protection ---
+app.use("*", csrfProtection)
 
 // --- Request logging ---
 app.use("*", async (c, next) => {
@@ -53,12 +64,17 @@ app.use("*", async (c, next) => {
   }
 })
 
+// --- Rate limiting ---
+app.use("/api/auth/*", apiRateLimit)
+app.use("/api/agents/*", agentRateLimit)
+
 // --- API routes ---
 app.route("/api/auth", authRoutes)
 app.route("/api/agents", agentRoutes)
 app.route("/api/sources", sourceRoutes)
 app.route("/api/jobs", jobRoutes)
 app.route("/api/runs", runRoutes)
+app.route("/api/restore", restoreRoutes)
 app.route("/api/wizard", wizardRoutes)
 app.route("/api/notifications", notificationRoutes)
 
@@ -109,6 +125,9 @@ app.get("*", async (c) => {
   }
   return c.json({ error: "Not found" }, 404)
 })
+
+// --- Start scheduler ---
+startScheduler()
 
 console.log(`[voidbackups] gateway starting on :${config.port} (${config.appUrl})`)
 
