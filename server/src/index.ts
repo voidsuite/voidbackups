@@ -172,6 +172,9 @@ if ! command -v restic &>/dev/null; then
   rm -f /tmp/restic.bz2
   echo "  ✓ restic installed"
 else
+  # Ensure restic is executable
+  RESTIC_PATH=$(command -v restic)
+  chmod +x "$RESTIC_PATH" 2>/dev/null || true
   echo "  ✓ restic already installed ($(restic version 2>&1 | head -1))"
 fi
 
