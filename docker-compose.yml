@@ -1,0 +1,20 @@
+# VoidBackups — self-hosted deployment.
+# Copy .env.example to .env and fill in the values before `docker compose up -d`.
+services:
+  voidbackups:
+    build: .
+    image: ghcr.io/voidsuite/voidbackups:latest
+    container_name: voidbackups
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3010}:3010"
+    env_file:
+      - .env
+    volumes:
+      # SQLite database + backup repos persist across container recreations.
+      - voidbackups-data:/app/server/data
+      # If backing up local Docker volumes, mount them here:
+      # - /var/lib/docker/volumes:/mnt/volumes:ro
+
+volumes:
+  voidbackups-data:
