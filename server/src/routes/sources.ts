@@ -133,21 +133,32 @@ sources.delete("/:id", authRequired, async (c) => {
 })
 
 // POST /api/sources/bulk — bulk create sources (from discovery)
+// Skips duplicates by matching agent_id + path.
 sources.post("/bulk", authRequired, async (c) => {
   const body = await c.req.json().catch(() => null)
   if (!body?.agentId || !Array.isArray(body?.sources)) {
     return c.json({ error: "Missing agentId or sources array" }, 400)
   }
 
+  // Get existing source paths for this agent to deduplicate
+  const existing = db.query("SELECT path FROM sources WHERE agent_id = ?").all(body.agentId) as Array<{ path: string }>
+  const existingPaths = new Set(existing.map((e) => e.path))
+
   const created: string[] = []
+  const skipped: string[] = []
   for (const s of body.sources) {
+    if (existingPaths.has(s.path)) {
+      skipped.push(s.path)
+      continue
+    }
     const id = newId()
     insertSource.run(id, body.agentId, s.type, s.name, s.path, JSON.stringify(s.metadata || {}), 1, 1, now())
+    existingPaths.add(s.path) // Prevent dupes within same batch
     created.push(id)
   }
 
-  auditLog("sources_bulk_created", { agentId: body.agentId, count: created.length })
-  return c.json({ created })
+  auditLog("sources_bulk_created", { agentId: body.agentId, created: created.length, skipped: skipped.length })
+  return c.json({ created, skipped })
 })
 
 export default sources

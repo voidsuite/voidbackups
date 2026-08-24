@@ -78,11 +78,11 @@ var daemonCmd = &cobra.Command{
 		// Discover sources periodically
 		go func() {
 			// Initial discovery
-			discoverAndReport(api, scanner)
+			discoverAndReport(api, scanner, cfg.AgentID)
 			// Re-discover every 5 minutes
 			ticker := time.NewTicker(5 * time.Minute)
 			for range ticker.C {
-				discoverAndReport(api, scanner)
+				discoverAndReport(api, scanner, cfg.AgentID)
 			}
 		}()
 
@@ -118,15 +118,30 @@ func heartbeat(api *client.Client, platform, arch, resticVersion, tailscaleIP st
 	}
 }
 
-func discoverAndReport(api *client.Client, scanner *discovery.Scanner) {
+func discoverAndReport(api *client.Client, scanner *discovery.Scanner, agentID string) {
 	sources := scanner.DiscoverAll()
 	if len(sources) == 0 {
 		return
 	}
 	log.Printf("[discovery] Found %d backup source(s)", len(sources))
+
+	// Convert to client format and report to server
+	var reported []client.ReportedSource
 	for _, s := range sources {
 		log.Printf("[discovery]   - [%s] %s (%s)", s.Type, s.Name, s.Path)
+		reported = append(reported, client.ReportedSource{
+			Type:     s.Type,
+			Name:     s.Name,
+			Path:     s.Path,
+			Metadata: s.Metadata,
+		})
 	}
+
+	if err := api.ReportSources(agentID, reported); err != nil {
+		log.Printf("[discovery] Failed to report sources: %v", err)
+		return
+	}
+	log.Printf("[discovery] Reported %d source(s) to server", len(reported))
 }
 
 func pollAndExecute(api *client.Client, exec *executor.Executor) {

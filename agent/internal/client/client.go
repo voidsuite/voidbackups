@@ -156,6 +156,23 @@ func (c *Client) ReportResult(taskID string, result TaskResult) error {
 	return c.post(fmt.Sprintf("/api/agents/tasks/%s/result", taskID), result, nil)
 }
 
+// ReportedSource represents a source to report to the server.
+type ReportedSource struct {
+	Type     string                 `json:"type"`
+	Name     string                 `json:"name"`
+	Path     string                 `json:"path"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ReportSources sends discovered sources to the server for bulk creation.
+func (c *Client) ReportSources(agentID string, sources []ReportedSource) error {
+	body := map[string]interface{}{
+		"agentId": agentID,
+		"sources": sources,
+	}
+	return c.post("/api/sources/bulk", body, nil)
+}
+
 // --- HTTP helpers ---
 
 func (c *Client) post(path string, body interface{}, result interface{}) error {

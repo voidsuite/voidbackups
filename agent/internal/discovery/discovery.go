@@ -28,13 +28,181 @@ func New() *Scanner {
 }
 
 // DiscoverAll runs all discovery methods and returns combined sources.
+// Void apps are discovered first with high priority so their data
+// is always captured even if generic scanners miss it.
 func (s *Scanner) DiscoverAll() []Source {
 	var sources []Source
+	sources = append(sources, s.DiscoverVoidApps()...)
 	sources = append(sources, s.DiscoverDockerVolumes()...)
 	sources = append(sources, s.DiscoverDockerContainers()...)
 	sources = append(sources, s.DiscoverSQLiteDatabases()...)
 	sources = append(sources, s.DiscoverSystemConfigs()...)
 	return sources
+}
+
+// --- Void App Auto-Discovery ---
+
+// voidAppPattern defines how to identify a Void suite app by container name or image.
+type voidAppPattern struct {
+	Names   []string // Container name substrings (case-insensitive)
+	Images  []string // Image substrings (case-insensitive)
+	AppName string   // Human-readable name
+}
+
+var voidApps = []voidAppPattern{
+	{Names: []string{"voidauth", "void-auth"}, Images: []string{"voidsuite/auth", "void-auth"}, AppName: "VoidAuth"},
+	{Names: []string{"m3il", "voidmail", "void-mail"}, Images: []string{"voidsuite/mail", "void-mail"}, AppName: "VoidMail"},
+	{Names: []string{"vdocs", "voiddocs", "void-docs"}, Images: []string{"voidsuite/docs", "void-docs"}, AppName: "VoidDocs"},
+	{Names: []string{"voidboard", "void-board"}, Images: []string{"voidsuite/board", "void-board"}, AppName: "VoidBoard"},
+	{Names: []string{"voidsheets", "void-sheets"}, Images: []string{"voidsuite/sheets", "void-sheets"}, AppName: "VoidSheets"},
+	{Names: []string{"voidbackups"}, Images: []string{"voidsuite/voidbackups"}, AppName: "VoidBackups"},
+	{Names: []string{"voiddraw", "void-draw"}, Images: []string{"voidsuite/draw", "void-draw"}, AppName: "VoidDraw"},
+	{Names: []string{"authiov", "voidauthiov"}, Images: []string{"voidsuite/authiov"}, AppName: "VoidAuthIO"},
+}
+
+// DiscoverVoidApps detects running Void suite containers and extracts their
+// backup-relevant data (volumes, databases, config paths).
+func (s *Scanner) DiscoverVoidApps() []Source {
+	if !s.commandExists("docker") {
+		return nil
+	}
+
+	// List all containers: ID|Names|Image|Mounts
+	out, err := exec.Command("docker", "ps", "-a", "--format", "{{.ID}}|{{.Names}}|{{.Image}}").Output()
+	if err != nil {
+		return nil
+	}
+
+	var sources []Source
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "|", 3)
+		if len(parts) < 3 {
+			continue
+		}
+		containerID, containerName, image := parts[0], parts[1], parts[2]
+
+		// Match against known Void apps
+		for _, pattern := range voidApps {
+			if matchVoidApp(containerName, image, pattern) {
+				appSources := s.discoverVoidAppData(containerID, containerName, image, pattern.AppName)
+				sources = append(sources, appSources...)
+				break
+			}
+		}
+	}
+	return sources
+}
+
+// matchVoidApp checks if a container matches a Void app pattern.
+func matchVoidApp(name, image string, p voidAppPattern) bool {
+	nameLower := strings.ToLower(name)
+	imageLower := strings.ToLower(image)
+	for _, n := range p.Names {
+		if strings.Contains(nameLower, n) {
+			return true
+		}
+	}
+	for _, img := range p.Images {
+		if strings.Contains(imageLower, img) {
+			return true
+		}
+	}
+	return false
+}
+
+// discoverVoidAppData inspects a Void app container and returns its backup sources.
+func (s *Scanner) discoverVoidAppData(containerID, containerName, image, appName string) []Source {
+	var sources []Source
+
+	// Get container mount points via docker inspect
+	inspect, err := exec.Command("docker", "inspect", containerID,
+		"--format", `{{range .Mounts}}{{.Type}}|{{.Source}}|{{.Destination}}|{{.Name}}{{"\n"}}{{end}}`).Output()
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(inspect)), "\n") {
+			if line == "" {
+				continue
+			}
+			mountParts := strings.SplitN(line, "|", 4)
+			if len(mountParts) < 3 {
+				continue
+			}
+			mountType, source, dest := mountParts[0], mountParts[1], mountParts[2]
+			volumeName := ""
+			if len(mountParts) > 3 {
+				volumeName = mountParts[3]
+			}
+
+			// Skip tmpfs and proc mounts
+			if mountType == "tmpfs" || mountType == "proc" || mountType == "sysfs" {
+				continue
+			}
+
+			// Detect what kind of data this mount holds
+			sourceType := "path"
+			sourceName := fmt.Sprintf("%s Data: %s", appName, filepath.Base(source))
+
+			if strings.HasSuffix(source, ".db") || strings.HasSuffix(source, ".sqlite") || strings.HasSuffix(source, ".sqlite3") {
+				sourceType = "sqlite"
+				sourceName = fmt.Sprintf("%s Database: %s", appName, filepath.Base(source))
+			} else if mountType == "volume" && volumeName != "" {
+				sourceType = "docker_volume"
+				sourceName = fmt.Sprintf("%s Volume: %s", appName, volumeName)
+			}
+
+			meta := map[string]interface{}{
+				"app":              appName,
+				"container_id":     containerID,
+				"container_name":   containerName,
+				"image":            image,
+				"mount_type":       mountType,
+				"mount_destination": dest,
+			}
+			if volumeName != "" {
+				meta["volume_name"] = volumeName
+			}
+
+			sources = append(sources, Source{
+				Type:     sourceType,
+				Name:     sourceName,
+				Path:     source,
+				Metadata: meta,
+			})
+		}
+	}
+
+	// If no mounts found, fall back to known data paths
+	if len(sources) == 0 {
+		sources = append(sources, Source{
+			Type: "docker_container",
+			Name: fmt.Sprintf("%s Container: %s", appName, containerName),
+			Path: containerID,
+			Metadata: map[string]interface{}{
+				"app":            appName,
+				"container_id":   containerID,
+				"container_name": containerName,
+				"image":          image,
+			},
+		})
+	}
+
+	return sources
+}
+
+// matchVoidAppByName is a simpler check for the old generic container scanner
+// to tag containers that are Void apps.
+func matchVoidAppByName(name string) string {
+	nameLower := strings.ToLower(name)
+	for _, pattern := range voidApps {
+		for _, n := range pattern.Names {
+			if strings.Contains(nameLower, n) {
+				return pattern.AppName
+			}
+		}
+	}
+	return ""
 }
 
 // DiscoverDockerVolumes finds Docker volumes on the system.
