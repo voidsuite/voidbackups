@@ -138,8 +138,38 @@ echo "Platform: $PLATFORM/$ARCH"
 if ! command -v restic &>/dev/null; then
   echo "Installing restic..."
   RESTIC_VERSION="0.17.3"
-  curl -fsSL "https://github.com/restic/restic/releases/download/v\${RESTIC_VERSION}/restic_\${RESTIC_VERSION}_\${PLATFORM}_\${ARCH}.bz2" | bunzip2 > /usr/local/bin/restic
+  RESTIC_URL="https://github.com/restic/restic/releases/download/v\${RESTIC_VERSION}/restic_\${RESTIC_VERSION}_\${PLATFORM}_\${ARCH}.bz2"
+  curl -fsSL "\$RESTIC_URL" -o /tmp/restic.bz2
+  # Try multiple decompressors
+  if command -v bunzip2 &>/dev/null; then
+    bunzip2 /tmp/restic.bz2
+  elif command -v bzip2 &>/dev/null; then
+    bzip2 -d /tmp/restic.bz2
+  elif command -v pbzip2 &>/dev/null; then
+    pbzip2 -d /tmp/restic.bz2
+  elif command -v python3 &>/dev/null; then
+    python3 -c "import bz2,sys; open('/tmp/restic','wb').write(bz2.decompress(open('/tmp/restic.bz2','rb').read()))"
+    rm -f /tmp/restic.bz2
+  else
+    # Install bzip2 via package manager
+    if command -v apt-get &>/dev/null; then
+      apt-get install -y bzip2
+      bunzip2 /tmp/restic.bz2
+    elif command -v apk &>/dev/null; then
+      apk add --no-cache bzip2
+      bunzip2 /tmp/restic.bz2
+    elif command -v yum &>/dev/null; then
+      yum install -y bzip2
+      bunzip2 /tmp/restic.bz2
+    else
+      echo "  ✗ Cannot decompress restic — install bzip2 manually"
+      rm -f /tmp/restic.bz2
+      exit 1
+    fi
+  fi
+  mv /tmp/restic /usr/local/bin/restic
   chmod +x /usr/local/bin/restic
+  rm -f /tmp/restic.bz2
   echo "  ✓ restic installed"
 else
   echo "  ✓ restic already installed ($(restic version 2>&1 | head -1))"
