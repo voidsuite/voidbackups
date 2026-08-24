@@ -57,15 +57,15 @@ export function prepareAuthenticationOptions(
 
 /** Encode a registration response for sending to the server. */
 export function encodeRegistrationResponse(
-  response: PublicKeyCredential
-): RegistrationResponseJSON {
-  const attestationResponse = response as AuthenticatorAttestationResponse
+  credential: PublicKeyCredential
+): Record<string, unknown> {
+  const attestationResponse = credential.response as AuthenticatorAttestationResponse
 
   return {
-    id: response.id,
-    rawId: bufferToBase64url(response.rawId),
-    type: response.type as "public-key",
-    clientExtensionResults: response.getClientExtensionResults(),
+    id: credential.id,
+    rawId: bufferToBase64url(credential.rawId),
+    type: credential.type,
+    clientExtensionResults: credential.getClientExtensionResults(),
     response: {
       attestationObject: bufferToBase64url(attestationResponse.attestationObject),
       clientDataJSON: bufferToBase64url(attestationResponse.clientDataJSON),
@@ -75,15 +75,15 @@ export function encodeRegistrationResponse(
 
 /** Encode an authentication response for sending to the server. */
 export function encodeAuthenticationResponse(
-  response: PublicKeyCredential
-): AuthenticationResponseJSON {
-  const assertionResponse = response as AuthenticatorAssertionResponse
+  credential: PublicKeyCredential
+): Record<string, unknown> {
+  const assertionResponse = credential.response as AuthenticatorAssertionResponse
 
   return {
-    id: response.id,
-    rawId: bufferToBase64url(response.rawId),
-    type: response.type as "public-key",
-    clientExtensionResults: response.getClientExtensionResults(),
+    id: credential.id,
+    rawId: bufferToBase64url(credential.rawId),
+    type: credential.type,
+    clientExtensionResults: credential.getClientExtensionResults(),
     response: {
       authenticatorData: bufferToBase64url(assertionResponse.authenticatorData),
       clientDataJSON: bufferToBase64url(assertionResponse.clientDataJSON),
@@ -94,6 +94,3 @@ export function encodeAuthenticationResponse(
     },
   }
 }
-
-// Re-export types for convenience
-export type { RegistrationResponseJSON, AuthenticationResponseJSON }

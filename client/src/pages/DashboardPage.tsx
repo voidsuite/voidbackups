@@ -12,7 +12,6 @@ import {
   XCircle,
   ArrowRight,
   Activity,
-  Shield,
   Plus,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,7 +25,15 @@ import { formatBytes, formatDuration, timeAgo } from "@/lib/utils"
 export function DashboardPage() {
   const { user } = useAuth()
   const [agents, setAgents] = useState<api.Agent[]>([])
-  const [stats, setStats] = useState<api.RunStats | null>(null)
+  const [stats, setStats] = useState<{
+    totalRuns: number
+    successfulRuns: number
+    failedRuns: number
+    successRate: number
+    totalBytesBackedUp: number
+    runsLast24h: number
+    avgDurationMs: number
+  } | null>(null)
   const [recentRuns, setRecentRuns] = useState<api.Run[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -69,7 +76,6 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome back, {user?.name || "Admin"}
@@ -79,7 +85,6 @@ export function DashboardPage() {
         </p>
       </div>
 
-      {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -131,15 +136,12 @@ export function DashboardPage() {
             <div className="text-2xl font-bold">
               {formatDuration(stats?.avgDurationMs ?? 0)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Per backup run
-            </p>
+            <p className="text-xs text-muted-foreground">Per backup run</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Agents */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -196,7 +198,6 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent activity */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>

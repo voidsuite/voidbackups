@@ -1,16 +1,15 @@
 /**
- * Notifications page — configure Telegram, webhook, and email notifications.
+ * Notifications page — configure notification channels.
  */
 
 import { useEffect, useState } from "react"
-import { Bell, Trash2, Send, Check } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Bell, Trash2, Send } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -53,7 +52,7 @@ export function NotificationsPage() {
   }
 
   async function handleAdd() {
-    let config: Record<string, any> = {}
+    let config: Record<string, unknown> = {}
     if (newType === "webhook") {
       config = { url: newUrl }
     } else if (newType === "telegram") {
@@ -83,7 +82,9 @@ export function NotificationsPage() {
     setTesting(id)
     try {
       await api.testNotification(id)
-    } catch {}
+    } catch {
+      // ignore
+    }
     setTimeout(() => setTesting(null), 2000)
   }
 
@@ -114,7 +115,7 @@ export function NotificationsPage() {
             <Bell className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-lg font-medium mb-2">No notification channels</p>
             <p className="text-sm text-muted-foreground text-center max-w-md">
-              Add a Telegram bot, webhook, or email channel to receive backup notifications.
+              Add a Telegram bot or webhook to receive backup notifications.
             </p>
           </CardContent>
         </Card>
@@ -157,7 +158,6 @@ export function NotificationsPage() {
         </div>
       )}
 
-      {/* Add channel dialog */}
       <Dialog open={addDialog} onOpenChange={setAddDialog}>
         <DialogContent>
           <DialogHeader>

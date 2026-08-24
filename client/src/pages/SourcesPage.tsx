@@ -1,18 +1,17 @@
 /**
- * Sources page — manage backup sources across agents.
+ * Sources page — view backup sources across agents.
  */
 
 import { useEffect, useState } from "react"
-import { HardDrive, Plus, Trash2, Database, Container, FolderOpen } from "lucide-react"
+import { HardDrive, Database, FolderOpen } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import * as api from "@/lib/api"
 
 const sourceIcons: Record<string, typeof HardDrive> = {
   docker_volume: FolderOpen,
-  docker_container: Container,
+  docker_container: FolderOpen,
   sqlite: Database,
   postgresql: Database,
   mysql: Database,
@@ -64,7 +63,6 @@ export function SourcesPage() {
             <p className="text-lg font-medium mb-2">No sources discovered</p>
             <p className="text-sm text-muted-foreground text-center max-w-md">
               Connect an agent first, then it will auto-discover backup sources.
-              You can also add sources manually.
             </p>
           </CardContent>
         </Card>

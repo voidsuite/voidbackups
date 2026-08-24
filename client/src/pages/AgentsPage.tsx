@@ -5,7 +5,6 @@
 import { useEffect, useState } from "react"
 import {
   Server,
-  Plus,
   Trash2,
   RefreshCw,
   ExternalLink,
@@ -24,7 +23,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   AlertDialog,
@@ -72,7 +70,7 @@ export function AgentsPage() {
     try {
       const result = await api.getAgentInstallScript(agentId)
       setInstallScript(result.script)
-    } catch (err) {
+    } catch {
       setInstallScript("# Error loading install script")
     }
   }
@@ -112,7 +110,6 @@ export function AgentsPage() {
             <p className="text-lg font-medium mb-2">No agents connected</p>
             <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
               Install the VoidBackups agent on your servers to start backing up.
-              Run the install script on each server to register it.
             </p>
           </CardContent>
         </Card>
@@ -226,7 +223,6 @@ export function AgentsPage() {
             <AlertDialogTitle>Remove Agent</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove the agent from VoidBackups. The agent will stop receiving backup tasks.
-              You can re-install it later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

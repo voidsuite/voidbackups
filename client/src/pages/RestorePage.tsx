@@ -6,16 +6,11 @@ import { useEffect, useState } from "react"
 import {
   RotateCcw,
   Clock,
-  HardDrive,
-  FolderOpen,
-  File,
   Check,
   Loader2,
-  ArrowLeft,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
@@ -79,7 +74,6 @@ export function RestorePage() {
     setSnapshots([])
     setSelectedSnapshot(null)
     try {
-      // Use the API to get snapshots for this job
       const response = await fetch(`/api/restore/snapshots/${jobId}`, {
         credentials: "include",
       })
@@ -133,7 +127,6 @@ export function RestorePage() {
         </p>
       </div>
 
-      {/* Job selection */}
       <Card>
         <CardHeader>
           <CardTitle>Select Backup Job</CardTitle>
@@ -159,7 +152,6 @@ export function RestorePage() {
         </CardContent>
       </Card>
 
-      {/* Snapshots */}
       {selectedJobId && (
         <Card>
           <CardHeader>
@@ -215,7 +207,6 @@ export function RestorePage() {
         </Card>
       )}
 
-      {/* Restore configuration */}
       {selectedSnapshot && (
         <Card>
           <CardHeader>
@@ -239,10 +230,7 @@ export function RestorePage() {
             <Separator />
 
             <div className="flex justify-end">
-              <Button
-                onClick={() => setRestoreDialog(true)}
-                className="gap-2"
-              >
+              <Button onClick={() => setRestoreDialog(true)} className="gap-2">
                 <RotateCcw className="h-4 w-4" />
                 Restore Snapshot
               </Button>
@@ -251,7 +239,6 @@ export function RestorePage() {
         </Card>
       )}
 
-      {/* Restore confirmation dialog */}
       <Dialog open={restoreDialog} onOpenChange={setRestoreDialog}>
         <DialogContent>
           {restoreComplete ? (

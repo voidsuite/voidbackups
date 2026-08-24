@@ -1,13 +1,12 @@
 /**
- * Jobs page — manage backup jobs (schedules, sources, retention).
+ * Jobs page — manage backup jobs.
  */
 
 import { useEffect, useState } from "react"
 import { Link } from "react-router"
-import { Clock, Plus, Play, Pause, Trash2, Settings, ArrowRight } from "lucide-react"
+import { Clock, Settings, Play } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import * as api from "@/lib/api"
@@ -36,7 +35,7 @@ export function JobsPage() {
   }
 
   async function handleToggle(job: api.Job) {
-    await api.updateJob(job.id, { enabled: job.enabled ? 0 : 1 } as any)
+    await api.updateJob(job.id, { enabled: job.enabled ? 0 : 1 } as Partial<api.Job>)
     loadJobs()
   }
 
@@ -84,7 +83,7 @@ export function JobsPage() {
                     <CardTitle className="text-lg">{job.name}</CardTitle>
                     <CardDescription>
                       {job.agent_name || "Unknown Agent"} •{" "}
-                      {job.schedule.type === "cron" ? job.schedule.cron : job.schedule.type}
+                      {job.schedule.type === "cron" ? String(job.schedule.cron) : String(job.schedule.type)}
                     </CardDescription>
                   </div>
                   <Switch

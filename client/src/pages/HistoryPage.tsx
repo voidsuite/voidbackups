@@ -12,9 +12,8 @@ import {
   ChevronRight,
   Eye,
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
@@ -25,7 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import * as api from "@/lib/api"
-import { formatBytes, formatDuration, formatDateTime, timeAgo } from "@/lib/utils"
+import { formatBytes, formatDuration, timeAgo } from "@/lib/utils"
 
 export function HistoryPage() {
   const [runs, setRuns] = useState<api.Run[]>([])
@@ -131,7 +130,6 @@ export function HistoryPage() {
         </CardContent>
       </Card>
 
-      {/* Pagination */}
       {pagination.pages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -158,7 +156,6 @@ export function HistoryPage() {
         </div>
       )}
 
-      {/* Log viewer dialog */}
       <Dialog open={!!logDialog} onOpenChange={() => { setLogDialog(null); setLogs("") }}>
         <DialogContent className="max-w-3xl max-h-[80vh]">
           <DialogHeader>

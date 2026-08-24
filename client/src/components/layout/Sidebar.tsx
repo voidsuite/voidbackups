@@ -14,13 +14,24 @@ import {
   LogOut,
   Shield,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { VoidBackupsLogo } from "@/components/layout/VoidBackupsLogo"
 
-const navItems = [
+interface NavItem {
+  to: string
+  icon: LucideIcon
+  label: string
+}
+
+interface SeparatorItem {
+  separator: boolean
+}
+
+const navItems: (NavItem | SeparatorItem)[] = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/agents", icon: Server, label: "Agents" },
   { to: "/sources", icon: HardDrive, label: "Sources" },
@@ -37,24 +48,23 @@ export function Sidebar() {
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
-      {/* Logo */}
       <div className="flex h-14 items-center gap-2 px-4">
         <VoidBackupsLogo size="sm" />
       </div>
 
       <Separator />
 
-      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {navItems.map((item, i) => {
           if ("separator" in item && item.separator) {
             return <Separator key={i} className="my-3" />
           }
-          if ("icon" in item) {
+          if ("icon" in item && "to" in item) {
+            const Icon = item.icon
             return (
               <NavLink
                 key={item.to}
-                to={item.to!}
+                to={item.to}
                 end={item.to === "/"}
                 className={({ isActive }) =>
                   cn(
@@ -65,7 +75,7 @@ export function Sidebar() {
                   )
                 }
               >
-                <item.icon className="h-4 w-4" />
+                <Icon className="h-4 w-4" />
                 {item.label}
               </NavLink>
             )
@@ -76,7 +86,6 @@ export function Sidebar() {
 
       <Separator />
 
-      {/* User info + logout */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
           <Shield className="h-4 w-4 text-primary" />

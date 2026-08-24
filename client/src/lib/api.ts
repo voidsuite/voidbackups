@@ -3,7 +3,7 @@
  * All API calls go through this module with credentials included.
  */
 
-export const gatewayBase = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "")
+export const gatewayBase = (import.meta as any).env?.VITE_API_URL || ""
 
 export class ApiError extends Error {
   status: number
@@ -60,7 +60,7 @@ export async function startRegistration(name: string): Promise<PublicKeyCredenti
 }
 
 export async function completeRegistration(
-  response: any,
+  response: Record<string, unknown>,
   challenge: string,
   name: string
 ): Promise<{ user: { id: string; name: string } }> {
@@ -77,7 +77,7 @@ export async function startLogin(): Promise<PublicKeyCredentialRequestOptionsJSO
 }
 
 export async function completeLogin(
-  response: any,
+  response: Record<string, unknown>,
   challenge: string
 ): Promise<{ user: { id: string; name: string } }> {
   return gateway("/api/auth/login/complete", {
@@ -125,7 +125,7 @@ export interface Source {
   type: string
   name: string
   path: string
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   discovered: number
   enabled: number
   created_at: number
@@ -140,23 +140,6 @@ export function listSources(): Promise<AgentSources[]> {
   return gateway("/api/sources")
 }
 
-export function createSource(data: {
-  agentId: string
-  type: string
-  name: string
-  path: string
-  metadata?: Record<string, any>
-}): Promise<{ id: string }> {
-  return gateway("/api/sources", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
-}
-
-export function deleteSource(id: string): Promise<void> {
-  return gateway(`/api/sources/${id}`, { method: "DELETE" })
-}
-
 // --- Jobs ---
 
 export interface Job {
@@ -164,12 +147,12 @@ export interface Job {
   name: string
   agent_id: string
   agent_name?: string
-  schedule: Record<string, any>
+  schedule: Record<string, unknown>
   sources: string[]
-  retention: Record<string, any>
-  storage: Record<string, any>
-  encryption: Record<string, any>
-  conditions: any[]
+  retention: Record<string, unknown>
+  storage: Record<string, unknown>
+  encryption: Record<string, unknown>
+  conditions: unknown[]
   enabled: number
   last_run: number | null
   next_run: number | null
@@ -185,16 +168,7 @@ export function getJob(id: string): Promise<Job & { sources_detail: Source[]; re
   return gateway(`/api/jobs/${id}`)
 }
 
-export function createJob(data: {
-  name: string
-  agentId: string
-  schedule?: Record<string, any>
-  sources?: string[]
-  retention?: Record<string, any>
-  storage?: Record<string, any>
-  encryption?: Record<string, any>
-  conditions?: any[]
-}): Promise<{ id: string }> {
+export function createJob(data: Record<string, unknown>): Promise<{ id: string }> {
   return gateway("/api/jobs", {
     method: "POST",
     body: JSON.stringify(data),
@@ -239,10 +213,6 @@ export interface Run {
   created_at: number
 }
 
-export interface RunDetail extends Run {
-  logs: string
-}
-
 export function listRuns(params?: {
   page?: number
   limit?: number
@@ -258,10 +228,6 @@ export function listRuns(params?: {
   if (params?.agentId) query.set("agentId", params.agentId)
   const qs = query.toString()
   return gateway(`/api/runs${qs ? `?${qs}` : ""}`)
-}
-
-export function getRun(id: string): Promise<RunDetail> {
-  return gateway(`/api/runs/${id}`)
 }
 
 export function getRunLogs(id: string): Promise<{ logs: string }> {
@@ -282,22 +248,7 @@ export function getRunStats(): Promise<{
 
 // --- Wizard ---
 
-export function getWizardStatus(): Promise<{
-  isSetup: boolean
-  steps: { account: boolean; storage: boolean; encryption: boolean; agent: boolean }
-}> {
-  return gateway("/api/wizard/status")
-}
-
-export function configureStorage(data: {
-  path: string
-  type?: string
-  s3Endpoint?: string
-  s3Bucket?: string
-  s3AccessKey?: string
-  s3SecretKey?: string
-  s3Region?: string
-}): Promise<void> {
+export function configureStorage(data: Record<string, unknown>): Promise<void> {
   return gateway("/api/wizard/storage", {
     method: "POST",
     body: JSON.stringify(data),
@@ -318,7 +269,7 @@ export interface NotificationChannel {
   id: string
   type: string
   name: string
-  config: Record<string, any>
+  config: Record<string, unknown>
   events: string[]
   enabled: number
   created_at: number
@@ -328,12 +279,7 @@ export function listNotifications(): Promise<NotificationChannel[]> {
   return gateway("/api/notifications")
 }
 
-export function createNotification(data: {
-  type: string
-  name: string
-  config: Record<string, any>
-  events?: string[]
-}): Promise<{ id: string }> {
+export function createNotification(data: Record<string, unknown>): Promise<{ id: string }> {
   return gateway("/api/notifications", {
     method: "POST",
     body: JSON.stringify(data),

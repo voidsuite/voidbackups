@@ -1,17 +1,14 @@
 /**
  * Setup page — first-time setup wizard.
- * Creates the admin passkey account, configures storage, encryption, and first agent.
  */
 
 import { useState } from "react"
 import { useNavigate } from "react-router"
-import { Loader2, ShieldCheck, HardDrive, KeyRound, Server, Check, Copy, ArrowRight, ArrowLeft } from "lucide-react"
+import { Loader2, ShieldCheck, HardDrive, KeyRound, Server, Check, ArrowRight, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
 import { VoidBackupsLogo } from "@/components/layout/VoidBackupsLogo"
 import { useAuth } from "@/contexts/auth"
 import * as api from "@/lib/api"
@@ -25,17 +22,9 @@ export function SetupPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Account step
   const [name, setName] = useState("")
-
-  // Storage step
   const [storagePath, setStoragePath] = useState("/var/backups/voidbackups")
-
-  // Encryption step
   const [encryptionPassword, setEncryptionPassword] = useState<string | null>(null)
-
-  // Agent step
-  const [installScript, setInstallScript] = useState<string | null>(null)
   const [scriptCopied, setScriptCopied] = useState(false)
 
   const handleCreateAccount = async () => {
@@ -82,36 +71,22 @@ export function SetupPage() {
     }
   }
 
-  const handleGetInstallScript = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      // Get the install script for the first agent
-      // We'll use a temporary agent ID — the actual registration happens via the script
-      const result = await api.getWizardStatus()
-      setInstallScript("# Run this script on your server to install the VoidBackups agent:\n# See the agent installation docs for details.")
-      setStep("done")
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleComplete = async () => {
     try {
       await api.completeWizard()
-    } catch {}
+    } catch {
+      // ignore
+    }
     navigate("/")
   }
 
-  const steps: { key: Step; label: string; icon: typeof ShieldCheck }[] = [
-    { key: "welcome", label: "Welcome", icon: ShieldCheck },
-    { key: "account", label: "Account", icon: ShieldCheck },
-    { key: "storage", label: "Storage", icon: HardDrive },
-    { key: "encryption", label: "Encryption", icon: KeyRound },
-    { key: "agent", label: "Agent", icon: Server },
-    { key: "done", label: "Done", icon: Check },
+  const steps: { key: Step; icon: typeof ShieldCheck }[] = [
+    { key: "welcome", icon: ShieldCheck },
+    { key: "account", icon: ShieldCheck },
+    { key: "storage", icon: HardDrive },
+    { key: "encryption", icon: KeyRound },
+    { key: "agent", icon: Server },
+    { key: "done", icon: Check },
   ]
 
   const currentStepIndex = steps.findIndex((s) => s.key === step)
@@ -119,7 +94,6 @@ export function SetupPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 bg-background">
       <div className="w-full max-w-lg space-y-8">
-        {/* Logo */}
         <div className="flex justify-center">
           <VoidBackupsLogo size="lg" tagline />
         </div>
@@ -140,24 +114,18 @@ export function SetupPage() {
                 {i < currentStepIndex ? <Check className="h-3.5 w-3.5" /> : i + 1}
               </div>
               {i < steps.length - 1 && (
-                <div
-                  className={`h-px w-8 ${
-                    i < currentStepIndex ? "bg-primary" : "bg-border"
-                  }`}
-                />
+                <div className={`h-px w-8 ${i < currentStepIndex ? "bg-primary" : "bg-border"}`} />
               )}
             </div>
           ))}
         </div>
 
-        {/* Error display */}
         {error && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        {/* Step content */}
         {step === "welcome" && (
           <Card>
             <CardHeader className="text-center">
@@ -306,7 +274,7 @@ export function SetupPage() {
                           setTimeout(() => setScriptCopied(false), 2000)
                         }}
                       >
-                        {scriptCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {scriptCopied ? <Check className="h-4 w-4" /> : <KeyRound className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
@@ -357,7 +325,6 @@ export function SetupPage() {
               </div>
               <p className="text-xs text-muted-foreground text-center">
                 The agent will register itself and start polling for backup tasks.
-                You can add more agents later from the Agents page.
               </p>
               <div className="flex gap-3">
                 <Button variant="outline" className="flex-1" onClick={() => setStep("encryption")}>

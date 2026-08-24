@@ -1,12 +1,11 @@
 /**
  * Login page — passkey authentication.
- * Simple: click the button, authenticate with your passkey.
  */
 
 import { useState } from "react"
 import { Loader2, Fingerprint } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { VoidBackupsLogo } from "@/components/layout/VoidBackupsLogo"
 import { useAuth } from "@/contexts/auth"
 
