@@ -55,7 +55,7 @@ notifications.post("/", authRequired, async (c) => {
     return c.json({ error: "Missing type, name, or config" }, 400)
   }
 
-  const validTypes = ["telegram", "webhook", "email"]
+  const validTypes = ["discord", "telegram", "webhook", "email"]
   if (!validTypes.includes(body.type)) {
     return c.json({ error: `Invalid type. Must be one of: ${validTypes.join(", ")}` }, 400)
   }
@@ -120,6 +120,25 @@ notifications.post("/:id/test", authRequired, async (c) => {
 
   try {
     switch (channel.type) {
+      case "discord": {
+        const embed = {
+          title: "🧪 VoidBackups Test",
+          description: "This is a test notification from VoidBackups. If you see this, your Discord webhook is configured correctly.",
+          color: 0x131416,
+          footer: { text: "VoidBackups" },
+          timestamp: new Date().toISOString(),
+        }
+        const res = await fetch(config.webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: "VoidBackups",
+            embeds: [embed],
+          }),
+        })
+        if (!res.ok) throw new Error(`Discord webhook returned ${res.status}`)
+        break
+      }
       case "webhook": {
         const res = await fetch(config.url, {
           method: "POST",
@@ -168,6 +187,7 @@ function sanitizeConfig(config: Record<string, any>): Record<string, any> {
   if (safe.botToken) safe.botToken = "***" + safe.botToken.slice(-4)
   if (safe.apiKey) safe.apiKey = "***" + safe.apiKey.slice(-4)
   if (safe.password) safe.password = "***"
+  if (safe.webhookUrl) safe.webhookUrl = "***" + safe.webhookUrl.slice(-10)
   return safe
 }
 

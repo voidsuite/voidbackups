@@ -33,9 +33,9 @@ export function NotificationsPage() {
   const [addDialog, setAddDialog] = useState(false)
   const [newType, setNewType] = useState("webhook")
   const [newName, setNewName] = useState("")
-  const [newUrl, setNewUrl] = useState("")
   const [newBotToken, setNewBotToken] = useState("")
   const [newChatId, setNewChatId] = useState("")
+  const [newWebhookUrl, setNewWebhookUrl] = useState("")
   const [testing, setTesting] = useState<string | null>(null)
 
   useEffect(() => {
@@ -53,8 +53,10 @@ export function NotificationsPage() {
 
   async function handleAdd() {
     let config: Record<string, unknown> = {}
-    if (newType === "webhook") {
-      config = { url: newUrl }
+    if (newType === "discord") {
+      config = { webhookUrl: newWebhookUrl }
+    } else if (newType === "webhook") {
+      config = { url: newWebhookUrl }
     } else if (newType === "telegram") {
       config = { botToken: newBotToken, chatId: newChatId }
     }
@@ -67,7 +69,7 @@ export function NotificationsPage() {
     })
     setAddDialog(false)
     setNewName("")
-    setNewUrl("")
+    setNewWebhookUrl("")
     setNewBotToken("")
     setNewChatId("")
     loadChannels()
@@ -115,7 +117,7 @@ export function NotificationsPage() {
             <Bell className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-lg font-medium mb-2">No notification channels</p>
             <p className="text-sm text-muted-foreground text-center max-w-md">
-              Add a Telegram bot or webhook to receive backup notifications.
+              Add a Discord, Telegram bot, or webhook to receive backup notifications.
             </p>
           </CardContent>
         </Card>
@@ -182,19 +184,25 @@ export function NotificationsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="discord">Discord</SelectItem>
                   <SelectItem value="webhook">Webhook</SelectItem>
                   <SelectItem value="telegram">Telegram</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {newType === "webhook" && (
+            {(newType === "discord" || newType === "webhook") && (
               <div className="space-y-2">
-                <Label>Webhook URL</Label>
+                <Label>{newType === "discord" ? "Discord Webhook URL" : "Webhook URL"}</Label>
                 <Input
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  placeholder="https://hooks.example.com/..."
+                  value={newWebhookUrl}
+                  onChange={(e) => setNewWebhookUrl(e.target.value)}
+                  placeholder={newType === "discord" ? "https://discord.com/api/webhooks/..." : "https://hooks.example.com/..."}
                 />
+                {newType === "discord" && (
+                  <p className="text-xs text-muted-foreground">
+                    Server Settings → Integrations → Webhooks → Create Webhook
+                  </p>
+                )}
               </div>
             )}
             {newType === "telegram" && (

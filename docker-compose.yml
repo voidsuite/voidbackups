@@ -12,7 +12,8 @@ services:
       - .env
     volumes:
       # SQLite database + backup repos persist across container recreations.
-      - voidbackups-data:/app/server/data
+      # DATA_DIR resolves to /app/data (3 levels up from src/db + ./data)
+      - voidbackups-data:/app/data
       # If backing up local Docker volumes, mount them here:
       # - /var/lib/docker/volumes:/mnt/volumes:ro
 

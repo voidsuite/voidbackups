@@ -10,6 +10,7 @@ import { now, randomHex } from "../db/connection.js"
 import { auditLog } from "../db/webauthn.js"
 import db from "../db/connection.js"
 import config from "../config.js"
+import { dispatchNotification } from "../lib/notifications.js"
 
 const agents = new Hono()
 
@@ -257,6 +258,24 @@ agents.post("/tasks/:taskId/result", agentAuthMiddleware(), async (c) => {
     jobId: run.job_id,
     status: body.status,
     durationMs,
+  })
+
+  // Send notifications
+  const jobName = run.job_name || "Unknown"
+  const event = body.status === "success" ? "backup_completed" : "backup_failed"
+  dispatchNotification(event, {
+    jobName,
+    agentName: agent.name,
+    status: body.status,
+    durationMs,
+    bytesNew: body.bytesNew,
+    bytesTotal: body.bytesTotal,
+    filesNew: body.filesNew,
+    filesChanged: body.filesChanged,
+    error: body.error,
+    snapshotId: body.snapshotId,
+  }).catch((err) => {
+    console.error("[notifications] dispatch error:", err.message)
   })
 
   return c.json({ ok: true })
