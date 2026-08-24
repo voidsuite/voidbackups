@@ -36,7 +36,7 @@ export async function startRegistration(userName: string): Promise<PublicKeyCred
     attestationType: "none",
     authenticatorSelection: {
       residentKey: "preferred",
-      userVerification: "preferred",
+      userVerification: "discouraged",
     },
   })
 
@@ -86,7 +86,7 @@ export async function completeRegistration(
 export async function startAuthentication(): Promise<PublicKeyCredentialRequestOptionsJSON> {
   const options = await generateAuthenticationOptions({
     rpID: RP_ID,
-    userVerification: "preferred",
+    userVerification: "discouraged",
   })
 
   // Store the challenge for verification later
