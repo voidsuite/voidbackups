@@ -25,6 +25,9 @@ COPY --from=build-client /app/client/dist ./client/dist
 COPY --from=build-server /app/server/node_modules ./server/node_modules
 COPY server/ ./server
 
+# Copy .env if it exists (will be overridden by docker-compose env_file)
+COPY .env* ./
+
 WORKDIR /app/server
 EXPOSE 3010
 
